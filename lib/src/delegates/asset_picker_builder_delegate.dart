@@ -958,7 +958,7 @@ class DefaultAssetPickerBuilderDelegate
                         child: Column(
                           children: <Widget>[
                             Expanded(child: assetsGridBuilder(context)),
-                            if (!isSingleAssetMode && isPreviewEnabled)
+                            // if (!isSingleAssetMode && isPreviewEnabled)
                               bottomActionBar(context),
                           ],
                         ),

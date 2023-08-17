@@ -57,12 +57,12 @@ Language: [English](README.md) | 中文
       * [注册资源变化回调](#注册资源变化回调)
       * [在表单数据中上传 `AssetEntity`](#在表单数据中上传-assetentity)
         * [使用 `http`](#使用-http)
-        * [使用 `diox`](#使用-diox)
+        * [使用 `dio`](#使用-dio)
     * [自定义选择器](#自定义选择器)
   * [常见问题 ❔](#常见问题-)
-    * [Execution failed for task ':photo_manager:compileDebugKotlin'](#execution-failed-for-task---photomanager--compiledebugkotlin)
+    * [Execution failed for task ':photo_manager:compileDebugKotlin'](#execution-failed-for-task-photomanagercompiledebugkotlin)
     * [从 `File` 或 `Uint8List` 创建 `AssetEntity` 的方法](#从-file-或-uint8list-创建-assetentity-的方法)
-    * [控制台提示 'Failed to find GeneratedAppGlideModule'](#控制台提示--failed-to-find-generatedappglidemodule)
+    * [控制台提示 'Failed to find GeneratedAppGlideModule'](#控制台提示-failed-to-find-generatedappglidemodule)
   * [致谢](#致谢)
 <!-- TOC -->
 </details>
@@ -129,12 +129,15 @@ Language: [English](README.md) | 中文
 
 ### 版本兼容
 
-|        | 2.10.0 | 3.0.0 | 3.3.0 | 3.7.0 |
-|--------|:------:|:-----:|:-----:|:-----:|
-| 8.4.0+ |   ❌    |   ❌   |   ❌   |   ✅   |
-| 8.0.0+ |   ❌    |   ✅   |   ✅   |   ❌   |
-| 7.3.0+ |   ❌    |   ✅   |   ✅   |   ❌   |
-| 7.0.0+ |   ✅    |   ❌   |   ❌   |   ❌   |
+该插件仅保证能与 **stable 渠道的 Flutter SDK** 配合使用。
+我们不会为其他渠道的 Flutter SDK 做实时支持。
+
+|        | 3.0.0 | 3.3.0 | 3.7.0 | 3.10.0 |
+|--------|:-----:|:-----:|:-----:|:------:|
+| 8.5.0+ |   ❌   |   ❌   |   ❌   |   ✅    |
+| 8.4.0+ |   ❌   |   ❌   |   ✅   |   ❌    |
+| 8.0.0+ |   ✅   |   ✅   |   ❌   |   ❌    |
+| 7.3.0+ |   ✅   |   ✅   |   ❌   |   ❌    |
 
 如果在 `flutter pub get` 时遇到了 `resolve conflict` 失败问题，
 请使用 `dependency_overrides` 解决。
@@ -376,24 +379,24 @@ Future<http.MultipartFile> multipartFileFromAssetEntity(AssetEntity entity) asyn
 }
 ```
 
-##### 使用 `diox`
+##### 使用 `dio`
 
-`diox` package: https://pub.flutter-io.cn/packages/diox
+`dio` package: https://pub.flutter-io.cn/packages/dio
 
-`diox` package 同样使用了
-[`MultipartFile`](https://pub.flutter-io.cn/documentation/diox/5.0.0-dev.2/diox/MultipartFile-class.html)
+`dio` package 同样使用了
+[`MultipartFile`](https://pub.flutter-io.cn/documentation/dio/latest/dio/MultipartFile-class.html)
 来在请求中处理文件。
 
 示例代码：
 ```dart
-import 'package:diox/diox.dart' as diox;
+import 'package:dio/dio.dart' as dio;
 
 Future<void> upload() async {
   final entity = await obtainYourEntity();
   final uri = Uri.https('example.com', 'create');
-  final response = diox.Dio().requestUri(
+  final response = dio.Dio().requestUri(
     uri,
-    data: diox.FormData.fromMap({
+    data: dio.FormData.fromMap({
       'test_field': 'test_value',
       'test_file': await multipartFileFromAssetEntity(entity),
     }),
@@ -401,20 +404,20 @@ Future<void> upload() async {
   print('Uploaded!');
 }
 
-Future<diox.MultipartFile> multipartFileFromAssetEntity(AssetEntity entity) async {
-  diox.MultipartFile mf;
+Future<dio.MultipartFile> multipartFileFromAssetEntity(AssetEntity entity) async {
+  dio.MultipartFile mf;
   // Using the file path.
   final file = await entity.file;
   if (file == null) {
     throw StateError('Unable to obtain file of the entity ${entity.id}.');
   }
-  mf = await diox.MultipartFile.fromFile(file.path);
+  mf = await dio.MultipartFile.fromFile(file.path);
   // Using the bytes.
   final bytes = await entity.originBytes;
   if (bytes == null) {
     throw StateError('Unable to obtain bytes of the entity ${entity.id}.');
   }
-  mf = diox.MultipartFile.fromBytes(bytes);
+  mf = dio.MultipartFile.fromBytes(bytes);
   return mf;
 }
 ```

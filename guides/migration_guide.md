@@ -6,13 +6,112 @@ that can be found in the LICENSE file. -->
 
 This document gathered all breaking changes and migrations requirement between major versions.
 
-## Major versions
+## Breaking changes in versions
 
+- [9.1.0](#910)
+- [9.0.0](#900)
+- [8.6.0](#860)
+- [8.3.0](#830)
 - [8.2.0](#820)
 - [8.0.0](#800)
 - [7.0.0](#700)
 - [6.0.0](#600)
 - [5.0.0](#500)
+
+## 9.1.0
+
+### Deprecates `iOSPermissionOverlay`
+
+Due to the support of the limited permission status on Android,
+the permission overlay will also displays on Android.
+Thus, `iOSPermissionOverlay` is now migrating to `permissionOverlay`.
+
+## 9.0.0
+
+### View assets signature change
+
+`AssetPickerBuilderDelegate.viewAsset` has 2 changes:
+- It now uses the generic type of the delegate rather than always `AssetEntity`.
+- The `index` of arguments is now nullable,
+  to indicate the behavior of previewing selected assets only.
+
+### Permission request option integration
+
+`PermissionRequestOption` has been added to
+`AssetPickerDelegate.permissionCheck` and
+`AssetPickerDelegate.pickAssetsWithDelegate` as an argument.
+Classes that extend `AssetPickerDelegate` and override these methods must migrate,
+Delegates that use `AssetPicker.permissionCheck`
+should choose whether to pass the request option.
+
+#### Details
+
+Before:
+
+1. ```dart
+   AssetPicker.permissionCheck();
+   ```
+
+2. ```dart
+   Future<PermissionState> permissionCheck();
+   ```
+
+3. ```dart
+   Future<List<Asset>?> pickAssetsWithDelegate<Asset, Path,
+      PickerProvider extends AssetPickerProvider<Asset, Path>>(
+    BuildContext context, {
+    required AssetPickerBuilderDelegate<Asset, Path> delegate,
+    Key? key,
+    bool useRootNavigator = true,
+    AssetPickerPageRouteBuilder<List<Asset>>? pageRouteBuilder,
+   })
+   ```
+
+After:
+
+1. ```dart
+   AssetPicker.permissionCheck(requestOption: ...);
+   ```
+
+2. ```dart
+   Future<PermissionState> permissionCheck({
+     PermissionRequestOption requestOption = const PermissionRequestOption,
+   });
+   ```
+
+3. ```dart
+   Future<List<Asset>?> pickAssetsWithDelegate<Asset, Path,
+      PickerProvider extends AssetPickerProvider<Asset, Path>>(
+    BuildContext context, {
+    required AssetPickerBuilderDelegate<Asset, Path> delegate,
+    PermissionRequestOption requestOption =
+        const PermissionRequestOption,
+    Key? key,
+    bool useRootNavigator = true,
+    AssetPickerPageRouteBuilder<List<Asset>>? pageRouteBuilder,
+   })
+   ```
+
+## 8.6.0
+
+### Summary
+
+`isAppleOS` in `AssetPickerBuilderDelegate` and `AssetPickerViewerBuilderDelegate`
+has been refactored to relies on the `TargetPlatform` from a given `BuildContext`.
+Delegates that extends those should update the signature at least.
+
+### Details
+
+Before:
+
+```dart
+bool get isAppleOS;
+```
+
+After:
+```dart
+bool isAppleOS(BuildContext context);
+```
 
 ## 8.3.0
 

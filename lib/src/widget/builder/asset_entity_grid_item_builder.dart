@@ -4,10 +4,10 @@
 
 import 'package:extended_image/extended_image.dart';
 import 'package:flutter/material.dart';
-import 'package:photo_manager/photo_manager.dart';
+import 'package:photo_manager_image_provider/photo_manager_image_provider.dart';
+import 'package:wechat_picker_library/wechat_picker_library.dart';
 
-import '../../internal/singleton.dart';
-import '../../widget/scale_text.dart';
+import '../../internals/singleton.dart';
 
 class AssetEntityGridItemBuilder extends StatefulWidget {
   const AssetEntityGridItemBuilder({
@@ -31,20 +31,11 @@ class AssetEntityGridItemWidgetState extends State<AssetEntityGridItemBuilder> {
     return ExtendedImage(
       image: widget.image,
       fit: BoxFit.cover,
-      loadStateChanged: (ExtendedImageState state) {
-        Widget loader = const SizedBox.shrink();
-        switch (state.extendedImageLoadState) {
-          case LoadState.loading:
-            loader = const ColoredBox(color: Color(0x10ffffff));
-            break;
-          case LoadState.completed:
-            loader = RepaintBoundary(child: state.completedWidget);
-            break;
-          case LoadState.failed:
-            loader = widget.failedItemBuilder(context);
-            break;
-        }
-        return loader;
+      loadStateChanged: (ExtendedImageState state) =>
+          switch (state.extendedImageLoadState) {
+        LoadState.loading => const ColoredBox(color: Color(0x10ffffff)),
+        LoadState.completed => RepaintBoundary(child: state.completedWidget),
+        LoadState.failed => widget.failedItemBuilder(context),
       },
     );
   }

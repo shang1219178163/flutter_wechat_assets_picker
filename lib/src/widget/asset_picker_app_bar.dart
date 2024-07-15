@@ -7,6 +7,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
+import 'package:wechat_picker_library/wechat_picker_library.dart';
 
 /// A custom app bar.
 /// 自定义的顶栏
@@ -86,8 +87,12 @@ class AssetPickerAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   final Semantics Function(Widget appBar)? semanticsBuilder;
 
-  bool canPop(BuildContext context) =>
-      Navigator.of(context).canPop() && automaticallyImplyLeading;
+  bool canPop(BuildContext context) {
+    if (Navigator.maybeOf(context)?.canPop() ?? false) {
+      return automaticallyImplyLeading;
+    }
+    return false;
+  }
 
   double get _barHeight => height ?? kToolbarHeight;
 
@@ -101,7 +106,7 @@ class AssetPickerAppBar extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     final AppBarTheme appBarTheme = theme.appBarTheme;
-    final IconThemeData iconTheme = this.iconTheme ?? theme.iconTheme;
+
     final Widget? titleWidget;
     if (centerTitle) {
       titleWidget = Center(child: title);
@@ -110,15 +115,18 @@ class AssetPickerAppBar extends StatelessWidget implements PreferredSizeWidget {
     }
     Widget child = Container(
       width: double.maxFinite,
-      height: _barHeight + MediaQuery.of(context).padding.top,
-      padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
+      height: _barHeight + MediaQuery.paddingOf(context).top,
+      padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top),
       child: Stack(
         children: <Widget>[
           if (canPop(context))
             PositionedDirectional(
               top: 0.0,
               bottom: 0.0,
-              child: leading ?? const BackButton(),
+              child: IconTheme.merge(
+                data: appBarTheme.iconTheme ?? theme.iconTheme,
+                child: leading ?? const BackButton(),
+              ),
             ),
           if (titleWidget != null)
             PositionedDirectional(
@@ -131,7 +139,8 @@ class AssetPickerAppBar extends StatelessWidget implements PreferredSizeWidget {
                     ? Alignment.center
                     : AlignmentDirectional.centerStart,
                 child: DefaultTextStyle(
-                  style: theme.textTheme.titleLarge!.copyWith(fontSize: 23.0),
+                  style: appBarTheme.titleTextStyle ??
+                      theme.textTheme.titleLarge!.copyWith(fontSize: 23.0),
                   maxLines: 1,
                   softWrap: false,
                   overflow: TextOverflow.ellipsis,
@@ -146,14 +155,27 @@ class AssetPickerAppBar extends StatelessWidget implements PreferredSizeWidget {
               top: 0.0,
               end: 0.0,
               height: _barHeight,
-              child: Padding(
-                padding: actionsPadding ?? EdgeInsets.zero,
-                child: Row(mainAxisSize: MainAxisSize.min, children: actions!),
+              child: IconTheme.merge(
+                data: appBarTheme.actionsIconTheme ?? theme.iconTheme,
+                child: Padding(
+                  padding: actionsPadding ?? EdgeInsets.zero,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: actions!,
+                  ),
+                ),
               ),
             ),
         ],
       ),
     );
+
+    if (bottom != null) {
+      child = Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[child, bottom!],
+      );
+    }
 
     // Allow custom blur radius using [ui.ImageFilter.blur].
     if (blurRadius > 0.0) {
@@ -166,36 +188,32 @@ class AssetPickerAppBar extends StatelessWidget implements PreferredSizeWidget {
     }
 
     /// Apply the icon theme data.
-    child = IconTheme.merge(data: iconTheme, child: child);
-
-    final Color effectiveBackgroundColor =
-        backgroundColor ?? theme.colorScheme.surface;
+    child = IconTheme.merge(
+      data: iconTheme ?? appBarTheme.iconTheme ?? theme.iconTheme,
+      child: child,
+    );
 
     // Set [SystemUiOverlayStyle] according to the brightness.
+    final Color effectiveBackgroundColor = backgroundColor ??
+        appBarTheme.backgroundColor ??
+        theme.colorScheme.surface;
     final Brightness effectiveBrightness = brightness ??
         appBarTheme.systemOverlayStyle?.statusBarBrightness ??
         theme.brightness;
-    final bool isDark = effectiveBrightness == Brightness.dark;
     final SystemUiOverlayStyle overlayStyle = appBarTheme.systemOverlayStyle ??
         SystemUiOverlayStyle(
           statusBarColor: effectiveBackgroundColor,
           systemNavigationBarIconBrightness: Brightness.light,
-          statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
-          statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
+          statusBarIconBrightness: effectiveBrightness.reverse,
+          statusBarBrightness: effectiveBrightness,
         );
     child = AnnotatedRegion<SystemUiOverlayStyle>(
       value: overlayStyle,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          child,
-          if (bottom != null) bottom!,
-        ],
-      ),
+      child: child,
     );
 
     final Widget result = Material(
-      // Wrap to ensure the child rendered correctly
+      // Wrap to ensure the child rendered correctly.
       color: Color.lerp(
         effectiveBackgroundColor,
         Colors.transparent,
@@ -205,7 +223,11 @@ class AssetPickerAppBar extends StatelessWidget implements PreferredSizeWidget {
       child: child,
     );
     return semanticsBuilder?.call(result) ??
-        Semantics(sortKey: const OrdinalSortKey(0), child: result);
+        Semantics(
+          sortKey: const OrdinalSortKey(0),
+          explicitChildNodes: true,
+          child: result,
+        );
   }
 }
 
@@ -228,8 +250,8 @@ class AssetPickerAppBarWrapper extends StatelessWidget {
       child: Stack(
         children: <Widget>[
           Positioned.fill(
-            top: MediaQuery.of(context).padding.top +
-                appBar.preferredSize.height,
+            top:
+                MediaQuery.paddingOf(context).top + appBar.preferredSize.height,
             child: MediaQuery.removePadding(
               context: context,
               removeTop: true,

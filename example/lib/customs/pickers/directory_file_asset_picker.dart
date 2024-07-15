@@ -13,7 +13,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:wechat_assets_picker/wechat_assets_picker.dart';
 
-import '../../constants/screens.dart';
+import '../../constants/extensions.dart';
 
 const Color themeColor = Color(0xff00bc56);
 
@@ -65,7 +65,7 @@ class _DirectoryFileAssetPickerState extends State<DirectoryFileAssetPicker> {
     }
   }
 
-  Widget get selectedAssetsWidget {
+  Widget selectedAssetsWidget(BuildContext context) {
     return AnimatedContainer(
       duration: kThemeChangeDuration,
       curve: Curves.easeInOut,
@@ -89,7 +89,7 @@ class _DirectoryFileAssetPickerState extends State<DirectoryFileAssetPicker> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
-                  const Text('Selected Assets'),
+                  Text(context.l10n.selectedAssetsText),
                   Container(
                     margin: const EdgeInsets.symmetric(
                       horizontal: 10.0,
@@ -118,20 +118,21 @@ class _DirectoryFileAssetPickerState extends State<DirectoryFileAssetPicker> {
               ),
             ),
           ),
-          selectedAssetsListView,
+          selectedAssetsListView(context),
         ],
       ),
     );
   }
 
-  Widget get selectedAssetsListView {
+  Widget selectedAssetsListView(BuildContext context) {
     return Expanded(
       child: ListView.builder(
+        shrinkWrap: true,
         physics: const BouncingScrollPhysics(),
         padding: const EdgeInsets.symmetric(horizontal: 8.0),
         scrollDirection: Axis.horizontal,
         itemCount: fileList.length,
-        itemBuilder: (BuildContext _, int index) {
+        itemBuilder: (_, int index) {
           return Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: 8.0,
@@ -189,7 +190,7 @@ class _DirectoryFileAssetPickerState extends State<DirectoryFileAssetPicker> {
                 },
               );
               final List<File>? result =
-                  await Navigator.of(context).push<List<File>>(pageRoute);
+                  await Navigator.maybeOf(context)?.push<List<File>>(pageRoute);
               if (result != null && result != fileList) {
                 fileList
                   ..clear()
@@ -237,17 +238,12 @@ class _DirectoryFileAssetPickerState extends State<DirectoryFileAssetPicker> {
     );
   }
 
-  Widget paddingText(String text) {
-    return Padding(
-      padding: const EdgeInsets.all(20),
-      child: SelectableText(text),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Directory+File picker')),
+      appBar: AppBar(
+        title: Text(context.l10n.customPickerDirectoryAndFileName),
+      ),
       body: Column(
         children: <Widget>[
           Expanded(
@@ -257,32 +253,24 @@ class _DirectoryFileAssetPickerState extends State<DirectoryFileAssetPicker> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: <Widget>[
-                  paddingText(
-                    'This is a custom picker built for `File`.\n'
-                    'By browsing this picker, we want you to know that '
-                    'you can build your own picker components using '
-                    "the entity's type you desired.",
-                  ),
-                  paddingText(
-                    'In this page, picker will grab files from '
-                    '`getExternalStorageDirectory`, Then check whether '
-                    'it contains images.',
-                  ),
-                  paddingText(
-                    'Put files into the path to see how this custom picker work.',
+                  Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: SelectableText(
+                      context.l10n.customPickerDirectoryAndFileDescription,
+                    ),
                   ),
                   TextButton(
                     onPressed: () => callPicker(context),
-                    child: const Text(
-                      '🎁 Call the Picker',
-                      style: TextStyle(fontSize: 22),
+                    child: Text(
+                      context.l10n.customPickerCallThePickerButton,
+                      style: const TextStyle(fontSize: 22),
                     ),
                   ),
                 ],
               ),
             ),
           ),
-          selectedAssetsWidget,
+          selectedAssetsWidget(context),
         ],
       ),
     );
@@ -302,18 +290,15 @@ class FileAssetPickerProvider extends AssetPickerProvider<File, Directory> {
   @override
   Future<void> getPaths() async {
     currentAssets = <File>[];
-    paths.clear();
-    final Directory? directory = await getExternalStorageDirectory();
-    if (directory != null) {
-      final PathWrapper<Directory> wrapper = PathWrapper<Directory>(
-        path: directory,
-        thumbnailData: await getThumbnailFromPath(
-          PathWrapper<Directory>(path: directory),
-        ),
-      );
-      paths.add(wrapper);
-      currentPath = wrapper;
-    }
+    final Directory directory = await getApplicationDocumentsDirectory();
+    final PathWrapper<Directory> wrapper = PathWrapper<Directory>(
+      path: directory,
+      thumbnailData: await getThumbnailFromPath(
+        PathWrapper<Directory>(path: directory),
+      ),
+    );
+    paths = [wrapper];
+    currentPath = wrapper;
   }
 
   @override
@@ -329,6 +314,11 @@ class FileAssetPickerProvider extends AssetPickerProvider<File, Directory> {
     }
     hasAssetsToDisplay = currentAssets.isNotEmpty;
     totalAssetsCount = currentAssets.length;
+    isAssetsEmpty = totalAssetsCount == 0;
+    final PathWrapper<Directory> wrapper = currentPath!;
+    if (wrapper.assetCount == null) {
+      currentPath = currentPath!.copyWith(assetCount: totalAssetsCount);
+    }
   }
 
   @override
@@ -391,10 +381,11 @@ class FileAssetPickerBuilder
   @override
   Future<void> viewAsset(
     BuildContext context,
-    int index,
-    AssetEntity currentAsset,
+    int? index,
+    File currentAsset,
   ) async {
-    final List<File>? result = await Navigator.of(context).push<List<File>?>(
+    final List<File>? result =
+        await Navigator.maybeOf(context)?.push<List<File>?>(
       PageRouteBuilder<List<File>>(
         pageBuilder: (
           BuildContext context,
@@ -403,7 +394,8 @@ class FileAssetPickerBuilder
         ) {
           return AssetPickerViewer<File, Directory>(
             builder: FileAssetPickerViewerBuilderDelegate(
-              currentIndex: index,
+              currentIndex:
+                  index ?? provider.selectedAssets.indexOf(currentAsset),
               previewAssets: provider.selectedAssets,
               provider: FileAssetPickerViewerProvider(provider.selectedAssets),
               themeData: AssetPicker.themeData(themeColor),
@@ -415,7 +407,7 @@ class FileAssetPickerBuilder
       ),
     );
     if (result != null) {
-      Navigator.of(context).maybePop(result);
+      Navigator.maybeOf(context)?.maybePop(result);
     }
   }
 
@@ -425,7 +417,7 @@ class FileAssetPickerBuilder
     required List<File> previewAssets,
     List<File>? selectedAssets,
     FileAssetPickerProvider? selectorProvider,
-  }) {
+  }) async {
     final Widget viewer = AssetPickerViewer<File, Directory>(
       builder: FileAssetPickerViewerBuilderDelegate(
         currentIndex: index,
@@ -455,7 +447,7 @@ class FileAssetPickerBuilder
         return FadeTransition(opacity: animation, child: child);
       },
     );
-    return Navigator.of(context).push<List<File>?>(pageRoute);
+    return await Navigator.maybeOf(context)?.push<List<File>?>(pageRoute);
   }
 
   @override
@@ -493,7 +485,8 @@ class FileAssetPickerBuilder
                               child: Column(
                                 children: <Widget>[
                                   Expanded(child: assetsGridBuilder(context)),
-                                  if (!isAppleOS) bottomActionBar(context),
+                                  if (!isAppleOS(context))
+                                    bottomActionBar(context),
                                 ],
                               ),
                             ),
@@ -513,18 +506,16 @@ class FileAssetPickerBuilder
 
   @override
   PreferredSizeWidget appBar(BuildContext context) {
-    return AppBar(
+    final AppBar appBar = AppBar(
       backgroundColor: theme.appBarTheme.backgroundColor,
-      centerTitle: isAppleOS,
-      title: pathEntitySelector(context),
+      title: Semantics(
+        onTapHint: semanticsTextDelegate.sActionSwitchPathLabel,
+        child: pathEntitySelector(context),
+      ),
       leading: backButton(context),
-      actions: !isAppleOS
-          ? <Widget>[
-              confirmButton(context),
-              const SizedBox(width: 14.0),
-            ]
-          : null,
     );
+    appBarPreferredSize ??= appBar.preferredSize;
+    return appBar;
   }
 
   @override
@@ -533,12 +524,8 @@ class FileAssetPickerBuilder
       children: <Widget>[
         Positioned.fill(
           child: Selector<FileAssetPickerProvider, bool>(
-            selector: (
-              _,
-              FileAssetPickerProvider p,
-            ) =>
-                p.hasAssetsToDisplay,
-            builder: (_, bool hasAssetsToDisplay, __) {
+            selector: (_, FileAssetPickerProvider p) => p.hasAssetsToDisplay,
+            builder: (BuildContext context, bool hasAssetsToDisplay, __) {
               return AnimatedSwitcher(
                 duration: switchingPathDuration,
                 child: hasAssetsToDisplay
@@ -550,7 +537,7 @@ class FileAssetPickerBuilder
                                 Positioned.fill(
                                   child: assetsGridBuilder(context),
                                 ),
-                                if (!isSingleAssetMode || isAppleOS)
+                                if (!isSingleAssetMode || isAppleOS(context))
                                   PositionedDirectional(
                                     bottom: 0.0,
                                     child: bottomActionBar(context),
@@ -567,7 +554,7 @@ class FileAssetPickerBuilder
             },
           ),
         ),
-        appBar(context),
+        Positioned.fill(bottom: null, child: appBar(context)),
       ],
     );
   }
@@ -584,7 +571,7 @@ class FileAssetPickerBuilder
       },
       child: Center(
         child: SizedBox.fromSize(
-          size: Size.square(Screens.width / gridCount / 3),
+          size: Size.square(MediaQuery.sizeOf(context).width / gridCount / 3),
           child: CircularProgressIndicator(
             valueColor: AlwaysStoppedAnimation<Color>(
               theme.iconTheme.color ?? Colors.grey,
@@ -597,12 +584,13 @@ class FileAssetPickerBuilder
 
   @override
   Widget assetsGridBuilder(BuildContext context) {
+    appBarPreferredSize ??= appBar(context).preferredSize;
     int totalCount = provider.currentAssets.length;
     if (specialItemPosition != SpecialItemPosition.none) {
       totalCount += 1;
     }
     final int placeholderCount;
-    if (isAppleOS && totalCount % gridCount != 0) {
+    if (isAppleOS(context) && totalCount % gridCount != 0) {
       placeholderCount = gridCount - totalCount % gridCount;
     } else {
       placeholderCount = 0;
@@ -610,14 +598,14 @@ class FileAssetPickerBuilder
     final int row = (totalCount + placeholderCount) ~/ gridCount;
     final double dividedSpacing = itemSpacing / gridCount;
     final double topPadding =
-        MediaQuery.of(context).padding.top + kToolbarHeight;
+        MediaQuery.paddingOf(context).top + appBarPreferredSize!.height;
 
-    Widget _sliverGrid(BuildContext ctx, List<File> assets) {
+    Widget sliverGrid(BuildContext ctx, List<File> assets) {
       return SliverGrid(
         delegate: SliverChildBuilderDelegate(
           (_, int index) => Builder(
             builder: (BuildContext c) {
-              if (isAppleOS) {
+              if (isAppleOS(c)) {
                 if (index < placeholderCount) {
                   return const SizedBox.shrink();
                 }
@@ -673,29 +661,29 @@ class FileAssetPickerBuilder
             child: Selector<FileAssetPickerProvider, List<File>>(
               selector: (_, FileAssetPickerProvider provider) =>
                   provider.currentAssets,
-              builder: (_, List<File> assets, __) => CustomScrollView(
+              builder: (context, List<File> assets, __) => CustomScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 controller: gridScrollController,
-                anchor: isAppleOS ? anchor : 0,
-                center: isAppleOS ? gridRevertKey : null,
+                anchor: isAppleOS(context) ? anchor : 0,
+                center: isAppleOS(context) ? gridRevertKey : null,
                 slivers: <Widget>[
-                  if (isAppleOS)
+                  if (isAppleOS(context))
                     SliverToBoxAdapter(
                       child: SizedBox(
-                        height:
-                            MediaQuery.of(context).padding.top + kToolbarHeight,
+                        height: MediaQuery.paddingOf(context).top +
+                            appBarPreferredSize!.height,
                       ),
                     ),
-                  _sliverGrid(_, assets),
+                  sliverGrid(context, assets),
                   // Ignore the gap when the [anchor] is not equal to 1.
-                  if (isAppleOS && anchor == 1)
+                  if (isAppleOS(context) && anchor == 1)
                     SliverToBoxAdapter(
                       child: SizedBox(
-                        height: MediaQuery.of(context).padding.bottom +
+                        height: MediaQuery.paddingOf(context).bottom +
                             bottomSectionHeight,
                       ),
                     ),
-                  if (isAppleOS)
+                  if (isAppleOS(context))
                     SliverToBoxAdapter(
                       key: gridRevertKey,
                       child: const SizedBox.shrink(),
@@ -715,17 +703,10 @@ class FileAssetPickerBuilder
     int index,
     List<File> currentAssets,
   ) {
-    int currentIndex;
-    switch (specialItemPosition) {
-      case SpecialItemPosition.none:
-      case SpecialItemPosition.append:
-        currentIndex = index;
-        break;
-      case SpecialItemPosition.prepend:
-        currentIndex = index - 1;
-        break;
-    }
-
+    final int currentIndex = switch (specialItemPosition) {
+      SpecialItemPosition.none || SpecialItemPosition.append => index,
+      SpecialItemPosition.prepend => index - 1,
+    };
     final File asset = currentAssets.elementAt(currentIndex);
     final Widget builder = imageAndVideoItemBuilder(
       context,
@@ -758,16 +739,12 @@ class FileAssetPickerBuilder
     required List<File> assets,
     int placeholderCount = 0,
   }) {
-    int length;
-    switch (specialItemPosition) {
-      case SpecialItemPosition.none:
-        length = assets.length;
-        break;
-      case SpecialItemPosition.prepend:
-      case SpecialItemPosition.append:
-        length = assets.length + 1;
-        break;
-    }
+    final int length = switch (specialItemPosition) {
+      SpecialItemPosition.none => assets.length,
+      SpecialItemPosition.prepend ||
+      SpecialItemPosition.append =>
+        assets.length + 1,
+    };
     return length + placeholderCount;
   }
 
@@ -797,7 +774,7 @@ class FileAssetPickerBuilder
             ),
             onPressed: () {
               if (provider.isSelectedNotEmpty) {
-                Navigator.of(context).pop(provider.selectedAssets);
+                Navigator.maybeOf(context)?.pop(provider.selectedAssets);
               }
             },
             materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -845,14 +822,16 @@ class FileAssetPickerBuilder
 
   @override
   Widget pathEntityListWidget(BuildContext context) {
-    final double appBarHeight = kToolbarHeight + Screens.topSafeHeight;
-    final double maxHeight = Screens.height * 0.825;
+    appBarPreferredSize ??= appBar(context).preferredSize;
+    final double appBarHeight =
+        appBarPreferredSize!.height + MediaQuery.paddingOf(context).top;
+    final double maxHeight = MediaQuery.sizeOf(context).height * 0.825;
     return ValueListenableBuilder<bool>(
       valueListenable: isSwitchingPath,
       builder: (_, bool isSwitchingPath, Widget? w) => AnimatedPositioned(
         duration: switchingPathDuration,
         curve: switchingPathCurve,
-        top: isAppleOS
+        top: isAppleOS(context)
             ? !isSwitchingPath
                 ? -maxHeight
                 : appBarHeight
@@ -860,12 +839,12 @@ class FileAssetPickerBuilder
         child: AnimatedOpacity(
           duration: switchingPathDuration,
           curve: switchingPathCurve,
-          opacity: !isAppleOS || isSwitchingPath ? 1.0 : 0.0,
+          opacity: !isAppleOS(context) || isSwitchingPath ? 1.0 : 0.0,
           child: Container(
-            width: Screens.width,
+            width: MediaQuery.sizeOf(context).width,
             height: maxHeight,
             decoration: BoxDecoration(
-              borderRadius: isAppleOS
+              borderRadius: isAppleOS(context)
                   ? const BorderRadius.vertical(bottom: Radius.circular(10.0))
                   : null,
               color: theme.colorScheme.background,
@@ -903,7 +882,9 @@ class FileAssetPickerBuilder
         onTap: () => isSwitchingPath.value = !isSwitchingPath.value,
         child: Container(
           height: appBarItemHeight,
-          constraints: BoxConstraints(maxWidth: Screens.width * 0.5),
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.sizeOf(context).width * 0.5,
+          ),
           padding: const EdgeInsetsDirectional.only(start: 12.0, end: 6.0),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(999),
@@ -991,7 +972,7 @@ class FileAssetPickerBuilder
           isSwitchingPath.value = false;
         },
         child: SizedBox(
-          height: isAppleOS ? 64.0 : 52.0,
+          height: isAppleOS(context) ? 64.0 : 52.0,
           child: Row(
             children: <Widget>[
               RepaintBoundary(
@@ -1049,7 +1030,7 @@ class FileAssetPickerBuilder
                     selectorProvider: provider,
                   );
                   if (result != null) {
-                    Navigator.of(context).pop(result);
+                    Navigator.maybeOf(context)?.pop(result);
                   }
                 }
               : null,
@@ -1085,7 +1066,8 @@ class FileAssetPickerBuilder
       builder: (_, List<File> selectedAssets, __) {
         final bool isSelected =
             selectedAssets.where((File f) => f.path == asset.path).isNotEmpty;
-        final double indicatorSize = Screens.width / gridCount / 3;
+        final double indicatorSize =
+            MediaQuery.sizeOf(context).width / gridCount / 3;
         return Positioned(
           top: 0.0,
           right: 0.0,
@@ -1103,15 +1085,17 @@ class FileAssetPickerBuilder
             },
             child: Container(
               margin: EdgeInsets.all(
-                Screens.width / gridCount / (isAppleOS ? 12.0 : 15.0),
+                MediaQuery.sizeOf(context).width /
+                    gridCount /
+                    (isAppleOS(context) ? 12.0 : 15.0),
               ),
               width: indicatorSize,
               height: indicatorSize,
               alignment: AlignmentDirectional.topEnd,
               child: AnimatedContainer(
                 duration: switchingPathDuration,
-                width: indicatorSize / (isAppleOS ? 1.25 : 1.5),
-                height: indicatorSize / (isAppleOS ? 1.25 : 1.5),
+                width: indicatorSize / (isAppleOS(context) ? 1.25 : 1.5),
+                height: indicatorSize / (isAppleOS(context) ? 1.25 : 1.5),
                 decoration: BoxDecoration(
                   border: !isSelected
                       ? Border.all(color: Colors.white, width: 2.0)
@@ -1131,8 +1115,8 @@ class FileAssetPickerBuilder
                                 color: isSelected
                                     ? theme.textTheme.bodyLarge?.color
                                     : null,
-                                fontSize: isAppleOS ? 16.0 : 14.0,
-                                fontWeight: isAppleOS
+                                fontSize: isAppleOS(context) ? 16.0 : 14.0,
+                                fontWeight: isAppleOS(context)
                                     ? FontWeight.w600
                                     : FontWeight.bold,
                               ),
@@ -1163,7 +1147,7 @@ class FileAssetPickerBuilder
                 previewAssets: provider.currentAssets,
               );
               if (result != null) {
-                Navigator.of(context).pop(result);
+                Navigator.maybeOf(context)?.pop(result);
               }
             },
             child: AnimatedContainer(
@@ -1205,8 +1189,8 @@ class FileAssetPickerBuilder
             child: Stack(
               fit: StackFit.expand,
               children: <Widget>[
-                if (isAppleOS) appleOSLayout(c) else androidLayout(c),
-                if (Platform.isIOS) iOSPermissionOverlay(c),
+                if (isAppleOS(context)) appleOSLayout(c) else androidLayout(c),
+                permissionOverlay(c),
               ],
             ),
           ),
@@ -1272,12 +1256,14 @@ class FileAssetPickerViewerBuilderDelegate
       curve: Curves.easeInOut,
       bottom: _isDisplayingDetail
           ? 0.0
-          : -(Screens.bottomSafeHeight + bottomDetailHeight),
+          : -(MediaQuery.paddingOf(context).bottom + bottomDetailHeight),
       left: 0.0,
       right: 0.0,
-      height: Screens.bottomSafeHeight + bottomDetailHeight,
+      height: MediaQuery.paddingOf(context).bottom + bottomDetailHeight,
       child: Container(
-        padding: EdgeInsetsDirectional.only(bottom: Screens.bottomSafeHeight),
+        padding: EdgeInsetsDirectional.only(
+          bottom: MediaQuery.paddingOf(context).bottom,
+        ),
         color: themeData.canvasColor.withOpacity(0.85),
         child: Column(
           children: <Widget>[
@@ -1304,7 +1290,7 @@ class FileAssetPickerViewerBuilderDelegate
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: <Widget>[
                     const Spacer(),
-                    if (isAppleOS && provider != null)
+                    if (isAppleOS(context) && provider != null)
                       ChangeNotifierProvider<
                           AssetPickerViewerProvider<File>>.value(
                         value: provider!,
@@ -1384,37 +1370,65 @@ class FileAssetPickerViewerBuilderDelegate
     return AnimatedPositioned(
       duration: kThemeAnimationDuration,
       curve: Curves.easeInOut,
-      top:
-          _isDisplayingDetail ? 0.0 : -(Screens.topSafeHeight + kToolbarHeight),
+      top: _isDisplayingDetail
+          ? 0.0
+          : -(MediaQuery.paddingOf(context).top + kToolbarHeight),
       left: 0.0,
       right: 0.0,
-      height: Screens.topSafeHeight + kToolbarHeight,
+      height: MediaQuery.paddingOf(context).top + kToolbarHeight,
       child: Container(
         padding: EdgeInsetsDirectional.only(
-          top: Screens.topSafeHeight,
+          top: MediaQuery.paddingOf(context).top,
           end: 12.0,
         ),
         color: themeData.canvasColor.withOpacity(0.85),
         child: Row(
           children: <Widget>[
-            const BackButton(),
-            if (!isAppleOS)
-              StreamBuilder<int>(
-                initialData: currentIndex,
-                stream: pageStreamController.stream,
-                builder: (BuildContext _, AsyncSnapshot<int> snapshot) {
-                  return Text(
-                    '${snapshot.data! + 1}/${previewAssets.length}',
-                    style: const TextStyle(
-                      fontSize: 18.0,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  );
-                },
+            Expanded(
+              child: Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: Semantics(
+                  sortKey: ordinalSortKey(0),
+                  child: IconButton(
+                    icon: const Icon(Icons.close),
+                    tooltip: MaterialLocalizations.of(
+                      context,
+                    ).backButtonTooltip,
+                    onPressed: Navigator.maybeOf(context)?.maybePop,
+                  ),
+                ),
               ),
-            const Spacer(),
-            if (isAppleOS && provider != null) selectButton(context),
-            if (!isAppleOS && provider != null) confirmButton(context),
+            ),
+            Expanded(
+              child: Center(
+                child: StreamBuilder<int>(
+                  initialData: currentIndex,
+                  stream: pageStreamController.stream,
+                  builder: (BuildContext _, AsyncSnapshot<int> snapshot) {
+                    return Text(
+                      '${snapshot.requireData + 1}/${previewAssets.length}',
+                      style: const TextStyle(
+                        fontSize: 18.0,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+            if (provider != null)
+              Expanded(
+                child: Container(
+                  alignment: AlignmentDirectional.centerEnd,
+                  padding: const EdgeInsetsDirectional.only(end: 14),
+                  child: Semantics(
+                    sortKey: ordinalSortKey(0.2),
+                    child: selectButton(context),
+                  ),
+                ),
+              )
+            else
+              const Spacer(),
           ],
         ),
       ),
@@ -1426,28 +1440,30 @@ class FileAssetPickerViewerBuilderDelegate
     return Theme(
       data: themeData,
       child: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: themeData.brightness == Brightness.dark
+        value: themeData.brightness.reverse == Brightness.dark
             ? SystemUiOverlayStyle.light
             : SystemUiOverlayStyle.dark,
-        child: Material(
-          color: Colors.black,
-          child: Stack(
-            children: <Widget>[
-              Positioned.fill(
-                child: PageView.builder(
-                  physics: const BouncingScrollPhysics(),
-                  controller: _pageController,
-                  itemCount: previewAssets.length,
-                  itemBuilder: assetPageBuilder,
-                  onPageChanged: (int index) {
-                    currentIndex = index;
-                    pageStreamController.add(index);
-                  },
+        child: Builder(
+          builder: (BuildContext context) => Material(
+            color: Colors.black,
+            child: Stack(
+              children: <Widget>[
+                Positioned.fill(
+                  child: PageView.builder(
+                    physics: const BouncingScrollPhysics(),
+                    controller: _pageController,
+                    itemCount: previewAssets.length,
+                    itemBuilder: assetPageBuilder,
+                    onPageChanged: (int index) {
+                      currentIndex = index;
+                      pageStreamController.add(index);
+                    },
+                  ),
                 ),
-              ),
-              appBar(context),
-              if (selectedAssets != null) bottomDetailBuilder(context),
-            ],
+                appBar(context),
+                if (selectedAssets != null) bottomDetailBuilder(context),
+              ],
+            ),
           ),
         ),
       ),
@@ -1476,7 +1492,8 @@ class FileAssetPickerViewerBuilderDelegate
             ),
             onPressed: () {
               if (provider.isSelectedNotEmpty) {
-                Navigator.of(context).pop(provider.currentlySelectedAssets);
+                Navigator.maybeOf(context)
+                    ?.pop(provider.currentlySelectedAssets);
               }
             },
             materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -1527,7 +1544,7 @@ class FileAssetPickerViewerBuilderDelegate
                   final File asset = previewAssets.elementAt(snapshot.data!);
                   final bool isSelected =
                       currentlySelectedAssets.contains(asset);
-                  if (isAppleOS) {
+                  if (isAppleOS(context)) {
                     return _appleOSSelectButton(isSelected, asset);
                   } else {
                     return _androidSelectButton(isSelected, asset);
@@ -1537,7 +1554,7 @@ class FileAssetPickerViewerBuilderDelegate
             );
           },
         ),
-        if (!isAppleOS)
+        if (!isAppleOS(context))
           Text(
             textDelegate.select,
             style: const TextStyle(fontSize: 18.0),

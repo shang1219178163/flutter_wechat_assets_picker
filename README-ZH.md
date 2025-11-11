@@ -14,13 +14,13 @@ that can be found in the LICENSE file. -->
 [![GitHub forks](https://img.shields.io/github/forks/fluttercandies/flutter_wechat_assets_picker?logo=github&style=flat-square)](https://github.com/fluttercandies/flutter_wechat_assets_picker/network)
 
 [![Awesome Flutter](https://cdn.rawgit.com/sindresorhus/awesome/d7305f38d29fed78fa85652e3a63e154dd8e8829/media/badge.svg)](https://github.com/Solido/awesome-flutter)
-<a target="_blank" href="https://jq.qq.com/?_wv=1027&k=5bcc0gy"><img border="0" src="https://pub.idqqimg.com/wpa/images/group.png" alt="FlutterCandies" title="FlutterCandies"></a>
+<a href="https://qm.qq.com/q/ZyJbSVjfSU"><img src="https://img.shields.io/badge/dynamic/yaml?url=https%3A%2F%2Fraw.githubusercontent.com%2Ffluttercandies%2F.github%2Frefs%2Fheads%2Fmain%2Fdata.yml&query=%24.qq_group_number&label=QQ%E7%BE%A4&logo=qq&style=flat&color=1DACE8" /></a>
 
 Language: [English](README.md) | 中文
 
 基于 **微信 UI** 的 Flutter **图片选择器（同时支持视频和音频）**。
 
-当前的界面设计基于的微信版本：**8.3.x**
+当前的界面设计基于的微信版本：**8.0.51**
 界面更新将在微信版本更新后随时进行跟进。
 
 如果你需要拍照及录制视频，请先查看示例的详细用法，
@@ -34,14 +34,13 @@ Language: [English](README.md) | 中文
 该插件仅保证能与 **stable 渠道的 Flutter SDK** 配合使用。
 我们不会为其他渠道的 Flutter SDK 做实时支持。
 
-|        | 3.0 | 3.3 | 3.7 | 3.10 | 3.13 | 3.16 |
-|--------|:---:|:---:|:---:|:----:|:----:|:----:|
-| 8.9.0+ |  ❌  |  ❌  |  ❌  |  ❌   |  ❌   |  ✅   |
-| 8.7.0+ |  ❌  |  ❌  |  ❌  |  ❌   |  ✅   |  ❌   |
-| 8.5.0+ |  ❌  |  ❌  |  ❌  |  ✅   |  ❌   |  ❌   |
-| 8.4.0+ |  ❌  |  ❌  |  ✅  |  ❌   |  ❌   |  ❌   |
-| 8.0.0+ |  ✅  |  ✅  |  ❌  |  ❌   |  ❌   |  ❌   |
-| 7.3.0+ |  ✅  |  ✅  |  ❌  |  ❌   |  ❌   |  ❌   |
+|        | 3.7 | 3.10 | 3.13 | 3.16 | 3.22 |
+|--------|:---:|:----:|:----:|:----:|:----:|
+| 9.5.0+ |  ❌  |  ❌   |  ❌   |  ❌   |  ✅   |
+| 8.9.0+ |  ❌  |  ❌   |  ❌   |  ✅   |  ❌   |
+| 8.7.0+ |  ❌  |  ❌   |  ✅   |  ❌   |  ❌   |
+| 8.5.0+ |  ❌  |  ✅   |  ❌   |  ❌   |  ❌   |
+| 8.4.0+ |  ✅  |  ❌   |  ❌   |  ❌   |  ❌   |
 
 如果在 `flutter pub get` 时遇到了 `resolve conflict` 失败问题，
 请使用 `dependency_overrides` 解决。
@@ -90,7 +89,8 @@ Language: [English](README.md) | 中文
         * [使用 `dio`](#使用-dio)
     * [自定义选择器](#自定义选择器)
   * [常见问题 ❔](#常见问题-)
-    * [Execution failed for task ':photo_manager:compileDebugKotlin'](#execution-failed-for-task-photomanagercompiledebugkotlin)
+    * [修改默认相册名称（将 `Recent` 改为其他）](#修改默认相册名称将-recent-改为其他)
+    * [Execution failed for task ':photo_manager:compileDebugKotlin'](#execution-failed-for-task-photo_managercompiledebugkotlin)
     * [从 `File` 或 `Uint8List` 创建 `AssetEntity` 的方法](#从-file-或-uint8list-创建-assetentity-的方法)
     * [控制台提示 'Failed to find GeneratedAppGlideModule'](#控制台提示-failed-to-find-generatedappglidemodule)
   * [致谢](#致谢)
@@ -132,11 +132,11 @@ Language: [English](README.md) | 中文
 
 ## 截图 📸
 
-| ![1](screenshots/README_1.webp)                          | ![2](screenshots/README_2.webp)                          | ![3](screenshots/README_3.webp)                          |
-|----------------------------------------------------------|----------------------------------------------------------|----------------------------------------------------------|
-| ![4](screenshots/README_4.webp)                          | ![5](screenshots/README_5.webp)                          | ![6](screenshots/README_6.webp)                          |
-| ![7](screenshots/README_7.webp)                          | ![8](screenshots/README_8.webp)                          | ![9](screenshots/README_9.webp)                          |
-| ![10](https://pic.alexv525.com/2021-07-05-picker_10.png) | ![10](https://pic.alexv525.com/2021-07-05-picker_11.png) | ![12](https://pic.alexv525.com/2021-07-05-picker_12.png) |
+| ![1](screenshots/README_1.webp)   | ![2](screenshots/README_2.webp)   | ![3](screenshots/README_3.webp)   |
+|-----------------------------------|-----------------------------------|-----------------------------------|
+| ![4](screenshots/README_4.webp)   | ![5](screenshots/README_5.webp)   | ![6](screenshots/README_6.webp)   |
+| ![7](screenshots/README_7.webp)   | ![8](screenshots/README_8.webp)   | ![9](screenshots/README_9.webp)   |
+| ![10](screenshots/README_10.webp) | ![11](screenshots/README_11.webp) | ![12](screenshots/README_12.webp) |
 
 ## 开始前的注意事项 ‼️
 
@@ -276,31 +276,35 @@ final List<AssetEntity>? result = await AssetPicker.pickAssets(
 
 `AssetPickerConfig` 的成员说明：
 
-| 参数名                               | 类型                                   | 描述                                                   | 默认值                         |
-|-----------------------------------|--------------------------------------|------------------------------------------------------|-----------------------------|
-| selectedAssets                    | `List<AssetEntity>?`                 | 已选的资源。确保不重复选择。                                       | `null`                      |
-| maxAssets                         | `int`                                | 最多选择的图片数量                                            | 9                           |
-| pageSize                          | `int`                                | 分页加载时每页加载的资源数量。**必须为网格数的倍数。                          | 80                          |
-| gridThumbnailSize                 | `ThumbnailSize`                      | 预览网格的缩略图大小                                           | `ThumbnailSize.square(200)` |
-| pathThumbnailSize                 | `ThumbnailSize`                      | 路径选择器的缩略图大小                                          | `ThumbnailSize.square(80)`  |
-| previewThumbnailSize              | `ThumbnailSize?`                     | 预览时图片的缩略图大小                                          | `null`                      |
-| requestType                       | `RequestType`                        | 选择器选择资源的类型                                           | `RequestType.common`        |
-| specialPickerType                 | `SpecialPickerType?`                 | 提供一些特殊的选择器类型以整合非常规的选择行为                              | `null`                      |
-| keepScrollOffset                  | `bool`                               | 选择器是否可以从同样的位置开始选择                                    | `null`                      |
-| sortPathDelegate                  | `SortPathDelegate<AssetPathEntity>?` | 资源路径的排序实现，可自定义路径排序方法                                 | `CommonSortPathDelegate`    |
-| sortPathsByModifiedDate           | `bool`                               | 是否结合 `FilterOptionGroup.containsPathModified` 进行路径排序 | `false`                     |
-| filterOptions                     | `PMFilter?`                          | 允许用户自定义资源过滤条件                                        | `null`                      |
-| gridCount                         | `int`                                | 选择器网格数量                                              | 4                           |
-| themeColor                        | `Color?`                             | 选择器的主题色                                              | `Color(0xff00bc56)`         |
-| pickerTheme                       | `ThemeData?`                         | 选择器的主题提供，包括查看器                                       | `null`                      |
-| textDelegate                      | `AssetPickerTextDelegate?`           | 选择器的文本代理构建，用于自定义文本                                   | `AssetPickerTextDelegate()` |
-| specialItemPosition               | `SpecialItemPosition`                | 允许用户在选择器中添加一个自定义item，并指定位置。                          | `SpecialPosition.none`      |
-| specialItemBuilder                | `SpecialItemBuilder?`                | 自定义item的构造方法                                         | `null`                      |
-| loadingIndicatorBuilder           | `IndicatorBuilder?`                  | 加载器的实现                                               | `null`                      |
-| selectPredicate                   | `AssetSelectPredicate`               | 判断资源可否被选择                                            | `null`                      |
-| shouldRevertGrid                  | `bool?`                              | 判断资源网格是否需要倒序排列                                       | `null`                      |
-| limitedPermissionOverlayPredicate | `LimitedPermissionOverlayPredicate?` | 判断有限的权限情况下是否展示提示页面                                   | `null`                      |
-| pathNameBuilder                   | `PathNameBuilder<AssetPathEntity>?`  | 基于路径（相册）构建自定义名称的方法                                   | `null`                      |
+| 参数名                               | 类型                                               | 描述                                                   | 默认值                         |
+|-----------------------------------|--------------------------------------------------|------------------------------------------------------|-----------------------------|
+| selectedAssets                    | `List<AssetEntity>?`                             | 已选的资源。确保不重复选择。                                       | `null`                      |
+| maxAssets                         | `int`                                            | 最多选择的图片数量                                            | 9                           |
+| pageSize                          | `int`                                            | 分页加载时每页加载的资源数量。**必须为网格数的倍数。                          | 80                          |
+| gridThumbnailSize                 | `ThumbnailSize`                                  | 预览网格的缩略图大小                                           | `ThumbnailSize.square(200)` |
+| pathThumbnailSize                 | `ThumbnailSize`                                  | 路径选择器的缩略图大小                                          | `ThumbnailSize.square(80)`  |
+| previewThumbnailSize              | `ThumbnailSize?`                                 | 预览时图片的缩略图大小                                          | `null`                      |
+| requestType                       | `RequestType`                                    | 选择器选择资源的类型                                           | `RequestType.common`        |
+| specialPickerType                 | `SpecialPickerType?`                             | 提供一些特殊的选择器类型以整合非常规的选择行为                              | `null`                      |
+| keepScrollOffset                  | `bool`                                           | 选择器是否可以从同样的位置开始选择                                    | `null`                      |
+| sortPathDelegate                  | `SortPathDelegate<AssetPathEntity>?`             | 资源路径的排序实现，可自定义路径排序方法                                 | `CommonSortPathDelegate`    |
+| sortPathsByModifiedDate           | `bool`                                           | 是否结合 `FilterOptionGroup.containsPathModified` 进行路径排序 | `false`                     |
+| filterOptions                     | `PMFilter?`                                      | 允许用户自定义资源过滤条件                                        | `null`                      |
+| gridCount                         | `int`                                            | 选择器网格数量                                              | 4                           |
+| themeColor                        | `Color?`                                         | 选择器的主题色                                              | `Color(0xff00bc56)`         |
+| pickerTheme                       | `ThemeData?`                                     | 选择器的主题提供，包括查看器                                       | `null`                      |
+| textDelegate                      | `AssetPickerTextDelegate?`                       | 选择器的文本代理构建，用于自定义文本                                   | `AssetPickerTextDelegate()` |
+| specialItemPosition               | `SpecialItemPosition`                            | 允许用户在选择器中添加一个自定义item，并指定位置。                          | `SpecialPosition.none`      |
+| specialItemBuilder                | `SpecialItemBuilder?`                            | 自定义item的构造方法                                         | `null`                      |
+| loadingIndicatorBuilder           | `IndicatorBuilder?`                              | 加载器的实现                                               | `null`                      |
+| selectPredicate                   | `AssetSelectPredicate`                           | 判断资源可否被选择                                            | `null`                      |
+| shouldRevertGrid                  | `bool?`                                          | 判断资源网格是否需要倒序排列                                       | `null`                      |
+| limitedPermissionOverlayPredicate | `LimitedPermissionOverlayPredicate?`             | 判断有限的权限情况下是否展示提示页面                                   | `null`                      |
+| pathNameBuilder                   | `PathNameBuilder<AssetPathEntity>?`              | 基于路径（相册）构建自定义名称的方法                                   | `null`                      |
+| assetsChangeCallback              | `AssetsChangeCallback<AssetPathEntity>?`         | 当系统通知资源变化时将调用的回调                                     | `null`                      |
+| assetsChangeRefreshPredicate      | `AssetsChangeRefreshPredicate<AssetPathEntity>?` | 判断资源变化是否根据 call 和当前选中的路径进行更新                         | `null`                      |
+| shouldAutoplayPreview             | `bool`                                           | 预览是否应自动播放                                            | `false`                     |
+| dragToSelect                      | `bool`                                           | 是否开启拖拽选择                                             | `true`                      |
 
 - 当 `maxAssets` 等于 `1`（即单选模式），搭配
   `SpecialPickerType.noPreview` 使用会在用户点选资源换时立刻选中并返回。
@@ -449,6 +453,25 @@ Future<dio.MultipartFile> multipartFileFromAssetEntity(AssetEntity entity) async
 更多细节请阅读 [贡献自定义实现][]。
 
 ## 常见问题 ❔
+
+### 修改默认相册名称（将 `Recent` 改为其他）
+
+在 Android 上 `Recent` 是总相册的默认名称，
+总相册是一个实际不存在的概念，它只是原始媒体数据的记录集合。
+
+想要在 Android 上解决这个问题，你可以像这样使用 `pathNameBuilder`：
+```dart
+AssetPickerConfig(
+  pathNameBuilder: (AssetPathEntity path) => switch (path) {
+    final p when p.isAll => '最近',
+    // 你也可以将类似的逻辑应用在其他常见的相册上。
+    _ => path.name,
+  },
+)
+```
+
+其他相册或者其他平台 (iOS/macOS) 上的相册会根据系统语言和配置支持的语言来进行展示。
+`pathNameBuilder` 可以用于任何的相册。
 
 ### Execution failed for task ':photo_manager:compileDebugKotlin'
 

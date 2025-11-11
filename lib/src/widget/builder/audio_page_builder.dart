@@ -13,11 +13,19 @@ import '../../constants/constants.dart';
 import '../../internals/singleton.dart';
 
 class AudioPageBuilder extends StatefulWidget {
-  const AudioPageBuilder({super.key, required this.asset});
+  const AudioPageBuilder({
+    super.key,
+    required this.asset,
+    this.shouldAutoplayPreview = false,
+  });
 
   /// Asset currently displayed.
   /// 展示的资源
   final AssetEntity asset;
+
+  /// Whether the preview should auto play.
+  /// 预览是否自动播放
+  final bool shouldAutoplayPreview;
 
   @override
   State<StatefulWidget> createState() => _AudioPageBuilderState();
@@ -92,6 +100,9 @@ class _AudioPageBuilderState extends State<AudioPageBuilder> {
       _controller = VideoPlayerController.networkUrl(Uri.parse(url!));
       await controller.initialize();
       controller.addListener(audioPlayerListener);
+      if (widget.shouldAutoplayPreview) {
+        controller.play();
+      }
     } catch (e, s) {
       FlutterError.presentError(
         FlutterErrorDetails(
@@ -103,9 +114,7 @@ class _AudioPageBuilderState extends State<AudioPageBuilder> {
       );
     } finally {
       isLoaded = true;
-      if (mounted) {
-        setState(() {});
-      }
+      safeSetState(() {});
     }
   }
 
@@ -114,9 +123,7 @@ class _AudioPageBuilderState extends State<AudioPageBuilder> {
   void audioPlayerListener() {
     if (isControllerPlaying != isPlaying) {
       isPlaying = isControllerPlaying;
-      if (mounted) {
-        setState(() {});
-      }
+      safeSetState(() {});
     }
 
     /// Add the current position into the stream.
@@ -134,9 +141,12 @@ class _AudioPageBuilderState extends State<AudioPageBuilder> {
   /// Title widget.
   /// 标题组件
   Widget get titleWidget {
-    return ScaleText(
-      widget.asset.title ?? '',
-      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.normal),
+    // Excluding audio title from semantics since the label already includes.
+    return ExcludeSemantics(
+      child: ScaleText(
+        widget.asset.title ?? '',
+        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.normal),
+      ),
     );
   }
 
@@ -191,7 +201,7 @@ class _AudioPageBuilderState extends State<AudioPageBuilder> {
       onLongPressHint:
           Singleton.textDelegate.semanticsTextDelegate.sActionPlayHint,
       child: ColoredBox(
-        color: context.theme.colorScheme.background,
+        color: context.theme.colorScheme.surface,
         child: isLoaded
             ? Column(
                 mainAxisAlignment: MainAxisAlignment.center,

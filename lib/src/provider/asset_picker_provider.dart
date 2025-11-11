@@ -3,10 +3,11 @@
 // in the LICENSE file.
 
 import 'dart:async';
+import 'dart:io';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Path;
 import 'package:photo_manager/photo_manager.dart';
 import 'package:provider/provider.dart';
 
@@ -271,12 +272,7 @@ class DefaultAssetPickerProvider
     this.filterOptions,
     Duration initializeDelayDuration = const Duration(milliseconds: 250),
   }) {
-    Singleton.sortPathDelegate = sortPathDelegate ?? SortPathDelegate.common;
-    // Call [getAssetList] with route duration when constructing.
-    Future<void>.delayed(initializeDelayDuration, () async {
-      await getPaths(onlyAll: true);
-      await getPaths(onlyAll: false);
-    });
+    init(initializeDelayDuration);
   }
 
   @visibleForTesting
@@ -310,6 +306,25 @@ class DefaultAssetPickerProvider
   /// 将会与基础条件进行合并。
   final PMFilter? filterOptions;
 
+  /// Initialize the provider.
+  void init(Duration initializeDelayDuration) {
+    Singleton.sortPathDelegate = sortPathDelegate ?? SortPathDelegate.common;
+    // Call [getAssetList] with route duration when constructing.
+    Future<void>.delayed(initializeDelayDuration, () async {
+      if (!_mounted) {
+        return;
+      }
+
+      await getPaths(onlyAll: true);
+
+      if (!_mounted) {
+        return;
+      }
+
+      await getPaths(onlyAll: false);
+    });
+  }
+
   @override
   set currentPath(PathWrapper<AssetPathEntity>? value) {
     if (value == _currentPath) {
@@ -329,15 +344,14 @@ class DefaultAssetPickerProvider
   }
 
   @override
-  Future<void> getPaths({bool onlyAll = false}) async {
-    final PMFilter options;
+  Future<void> getPaths({
+    bool onlyAll = false,
+    bool keepPreviousCount = false,
+  }) async {
+    final PMFilter? options;
     final fog = filterOptions;
-    if (fog == null) {
-      options = AdvancedCustomFilter(
-        orderBy: [OrderByItem.desc(CustomColumns.base.createDate)],
-      );
-    } else if (fog is FilterOptionGroup) {
-      final newOptions = FilterOptionGroup(
+    if (fog is FilterOptionGroup) {
+      options = FilterOptionGroup(
         imageOption: const FilterOption(
           sizeConstraint: SizeConstraint(ignoreSize: true),
         ),
@@ -349,9 +363,11 @@ class DefaultAssetPickerProvider
         containsPathModified: sortPathsByModifiedDate,
         createTimeCond: DateTimeCond.def().copyWith(ignore: true),
         updateTimeCond: DateTimeCond.def().copyWith(ignore: true),
+      )..merge(fog);
+    } else if (fog == null && Platform.isAndroid) {
+      options = AdvancedCustomFilter(
+        orderBy: [OrderByItem.desc(CustomColumns.android.modifiedDate)],
       );
-      newOptions.merge(fog);
-      options = newOptions;
     } else {
       options = fog;
     }
@@ -362,13 +378,25 @@ class DefaultAssetPickerProvider
       onlyAll: onlyAll,
     );
 
-    _paths = list.map((p) => PathWrapper<AssetPathEntity>(path: p)).toList();
+    _paths = list.map((p) {
+      final int? assetCount;
+      if (keepPreviousCount) {
+        assetCount =
+            _paths.where((e) => e.path.id == p.id).firstOrNull?.assetCount;
+      } else {
+        assetCount = null;
+      }
+      return PathWrapper<AssetPathEntity>(path: p, assetCount: assetCount);
+    }).toList();
     // Sort path using sort path delegate.
     Singleton.sortPathDelegate.sort(_paths);
-    // Use sync method to avoid unnecessary wait.
-    _paths
-      ..forEach(getAssetCountFromPath)
-      ..forEach(getThumbnailFromPath);
+    // Populate fields to paths without awaiting.
+    for (final path in _paths) {
+      Future(() async {
+        await getAssetCountFromPath(path);
+        await getThumbnailFromPath(path);
+      });
+    }
 
     // Set first path entity as current path entity.
     if (_paths.isNotEmpty) {
@@ -479,7 +507,10 @@ class DefaultAssetPickerProvider
         (PathWrapper<AssetPathEntity> p) => p.path == path.path,
       );
       if (index != -1) {
-        _paths[index] = _paths[index].copyWith(thumbnailData: data);
+        _paths[index] = _paths[index].copyWith(
+          assetCount: assetCount,
+          thumbnailData: data,
+        );
         notifyListeners();
       }
       return data;

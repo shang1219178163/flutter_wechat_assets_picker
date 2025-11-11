@@ -37,6 +37,10 @@ class AssetPickerConfig {
     this.hidePreviewButton = false,
     this.limitedPermissionOverlayPredicate,
     this.pathNameBuilder,
+    this.assetsChangeCallback,
+    this.assetsChangeRefreshPredicate,
+    this.shouldAutoplayPreview = false,
+    this.dragToSelect,
   })  : assert(
           pickerTheme == null || themeColor == null,
           'pickerTheme and themeColor cannot be set at the same time.',
@@ -196,4 +200,27 @@ class AssetPickerConfig {
 
   /// {@macro wechat_assets_picker.PathNameBuilder}
   final PathNameBuilder<AssetPathEntity>? pathNameBuilder;
+
+  /// {@macro wechat_assets_picker.AssetsChangeCallback}
+  final AssetsChangeCallback<AssetPathEntity>? assetsChangeCallback;
+
+  /// {@macro wechat_assets_picker.AssetsChangeRefreshPredicate}
+  final AssetsChangeRefreshPredicate<AssetPathEntity>?
+      assetsChangeRefreshPredicate;
+
+  /// Whether the preview should auto play.
+  /// 预览是否自动播放
+  final bool shouldAutoplayPreview;
+
+  /// {@template wechat_assets_picker.constants.AssetPickerConfig.dragToSelect}
+  /// Whether assets selection can be done with drag gestures.
+  /// 是否开启拖拽选择
+  ///
+  /// The feature enables by default if no accessibility service is being used.
+  /// 在未使用辅助功能的情况下会默认启用该功能。
+  ///
+  /// The feature is not available when `maxAssets` is `1`.
+  /// 当 `maxAssets` 为 `1` 时，该功能不可用。
+  /// {@endtemplate}
+  final bool? dragToSelect;
 }

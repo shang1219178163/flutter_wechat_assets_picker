@@ -6,7 +6,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:extended_image/extended_image.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Path;
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:photo_manager/photo_manager.dart';
@@ -39,8 +39,9 @@ abstract class AssetPickerViewerBuilderDelegate<Asset, Path> {
     this.maxAssets,
     this.shouldReversePreview = false,
     this.selectPredicate,
-  })  : assert(maxAssets == null || maxAssets > 0),
-        assert(currentIndex >= 0);
+  })  : assert(previewAssets.isNotEmpty),
+        assert(currentIndex >= 0),
+        assert(maxAssets == null || maxAssets > 0);
 
   /// [ChangeNotifier] for photo selector viewer.
   /// 资源预览器的状态保持
@@ -390,7 +391,12 @@ class DefaultAssetPickerViewerBuilderDelegate
     super.maxAssets,
     super.shouldReversePreview,
     super.selectPredicate,
+    this.shouldAutoplayPreview = false,
   });
+
+  /// Whether the preview should auto play.
+  /// 预览是否自动播放
+  final bool shouldAutoplayPreview;
 
   /// Thumb size for the preview of images in the viewer.
   /// 预览时图片的缩略图大小
@@ -421,16 +427,21 @@ class DefaultAssetPickerViewerBuilderDelegate
       shouldReversePreview ? previewAssets.length - index - 1 : index,
     );
     final Widget builder = switch (asset.type) {
-      AssetType.audio => AudioPageBuilder(asset: asset),
+      AssetType.audio => AudioPageBuilder(
+          asset: asset,
+          shouldAutoplayPreview: shouldAutoplayPreview,
+        ),
       AssetType.image => ImagePageBuilder(
           asset: asset,
           delegate: this,
           previewThumbnailSize: previewThumbnailSize,
+          shouldAutoplayPreview: shouldAutoplayPreview,
         ),
       AssetType.video => VideoPageBuilder(
           asset: asset,
           delegate: this,
           hasOnlyOneVideoAndMoment: isWeChatMoment && hasVideo,
+          shouldAutoplayPreview: shouldAutoplayPreview,
         ),
       AssetType.other => Center(
           child: ScaleText(
@@ -449,20 +460,18 @@ class DefaultAssetPickerViewerBuilderDelegate
           final bool isSelected =
               (p?.currentlySelectedAssets ?? selectedAssets)?.contains(asset) ??
                   false;
-          String hint = '';
-          if (asset.type == AssetType.audio || asset.type == AssetType.video) {
-            hint += '${semanticsTextDelegate.sNameDurationLabel}: ';
-            hint += textDelegate.durationIndicatorBuilder(asset.videoDuration);
-          }
-          if (asset.title?.isNotEmpty ?? false) {
-            hint += ', ${asset.title}';
-          }
+          final labels = <String>[
+            '${semanticsTextDelegate.semanticTypeLabel(asset.type)}'
+                '${index + 1}',
+            asset.createDateTime.toString().replaceAll('.000', ''),
+            if (asset.type == AssetType.audio || asset.type == AssetType.video)
+              '${semanticsTextDelegate.sNameDurationLabel}: '
+                  '${semanticsTextDelegate.durationIndicatorBuilder(asset.videoDuration)}',
+            if (asset.title case final title? when title.isNotEmpty) title,
+          ];
           return Semantics(
-            label: '${semanticsTextDelegate.semanticTypeLabel(asset.type)}'
-                '${index + 1}, '
-                '${asset.createDateTime.toString().replaceAll('.000', '')}',
+            label: labels.join(', '),
             selected: isSelected,
-            hint: hint,
             image:
                 asset.type == AssetType.image || asset.type == AssetType.video,
             child: w,
@@ -723,11 +732,8 @@ class DefaultAssetPickerViewerBuilderDelegate
           onPressed: () {
             Navigator.maybeOf(context)?.maybePop();
           },
-          tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
-          icon: Icon(
-            Icons.close,
-            semanticLabel: MaterialLocalizations.of(context).closeButtonTooltip,
-          ),
+          tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+          icon: const Icon(Icons.arrow_back_ios_new),
         ),
       ),
       centerTitle: true,
@@ -787,13 +793,17 @@ class DefaultAssetPickerViewerBuilderDelegate
           );
           Future<void> onPressed() async {
             if (isWeChatMoment && hasVideo) {
-              Navigator.maybeOf(context)?.pop(<AssetEntity>[currentAsset]);
+              if (await onChangingSelected(context, currentAsset, false)) {
+                Navigator.maybeOf(context)?.pop(<AssetEntity>[currentAsset]);
+              }
               return;
             }
+
             if (provider!.isSelectedNotEmpty) {
               Navigator.maybeOf(context)?.pop(provider.currentlySelectedAssets);
               return;
             }
+
             if (await onChangingSelected(context, currentAsset, false)) {
               Navigator.maybeOf(context)?.pop(
                 selectedAssets ?? <AssetEntity>[currentAsset],
@@ -814,10 +824,9 @@ class DefaultAssetPickerViewerBuilderDelegate
             return textDelegate.confirm;
           }
 
-          final bool isButtonEnabled = provider == null ||
-              provider.currentlySelectedAssets.isNotEmpty ||
+          final isButtonEnabled = provider == null ||
               previewAssets.isEmpty ||
-              selectedNotifier.value == 0;
+              (selectedAssets?.isNotEmpty ?? false);
           return MaterialButton(
             minWidth:
                 (isWeChatMoment && hasVideo) || provider!.isSelectedNotEmpty
@@ -920,9 +929,23 @@ class DefaultAssetPickerViewerBuilderDelegate
         stream: pageStreamController.stream,
         builder: (_, s) {
           final index = s.data!;
-          final AssetEntity asset = previewAssets.elementAt(
-            shouldReversePreview ? previewAssets.length - index - 1 : index,
-          );
+          final assetIndex =
+              shouldReversePreview ? previewAssets.length - index - 1 : index;
+          if (assetIndex < 0) {
+            throw IndexError.withLength(
+              assetIndex,
+              previewAssets.length,
+              indexable: previewAssets,
+              name: 'selectButton.assetIndex',
+              message: 'previewReversed: $shouldReversePreview\n'
+                  'stream.index: $index\n'
+                  'selectedAssets.length: ${selectedAssets?.length}\n'
+                  'previewAssets.length: ${previewAssets.length}\n'
+                  'currentIndex: $currentIndex\n'
+                  'maxAssets: $maxAssets',
+            );
+          }
+          final asset = previewAssets.elementAt(assetIndex);
           return Selector<AssetPickerViewerProvider<AssetEntity>,
               List<AssetEntity>>(
             selector: (_, p) => p.currentlySelectedAssets,
@@ -986,9 +1009,9 @@ class DefaultAssetPickerViewerBuilderDelegate
             (themeData.effectiveBrightness.isDark
                 ? SystemUiOverlayStyle.light
                 : SystemUiOverlayStyle.dark),
-        child: Material(
-          color: themeData.scaffoldBackgroundColor,
-          child: Stack(
+        child: Scaffold(
+          resizeToAvoidBottomInset: false,
+          body: Stack(
             children: <Widget>[
               Positioned.fill(child: _pageViewBuilder(context)),
               if (isWeChatMoment && hasVideo) ...<Widget>[

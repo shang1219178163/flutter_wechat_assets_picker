@@ -5,9 +5,10 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Path;
 import 'package:flutter/services.dart';
 import 'package:photo_manager/photo_manager.dart';
+import 'package:wechat_picker_library/wechat_picker_library.dart';
 
 import '../constants/config.dart';
 import '../delegates/asset_picker_builder_delegate.dart';
@@ -52,6 +53,7 @@ class AssetPicker<Asset, Path> extends StatefulWidget {
     PermissionRequestOption? permissionRequestOption,
     AssetPickerConfig pickerConfig = const AssetPickerConfig(),
     bool useRootNavigator = true,
+    RouteSettings? pageRouteSettings,
     AssetPickerPageRouteBuilder<List<AssetEntity>>? pageRouteBuilder,
   }) {
     return _pickerDelegate.pickAssets(
@@ -60,6 +62,7 @@ class AssetPicker<Asset, Path> extends StatefulWidget {
       pickerConfig: pickerConfig,
       permissionRequestOption: permissionRequestOption,
       useRootNavigator: useRootNavigator,
+      pageRouteSettings: pageRouteSettings,
       pageRouteBuilder: pageRouteBuilder,
     );
   }
@@ -72,6 +75,7 @@ class AssetPicker<Asset, Path> extends StatefulWidget {
     PermissionRequestOption permissionRequestOption =
         const PermissionRequestOption(),
     Key? key,
+    RouteSettings? pageRouteSettings,
     AssetPickerPageRouteBuilder<List<Asset>>? pageRouteBuilder,
     bool useRootNavigator = true,
   }) {
@@ -81,6 +85,7 @@ class AssetPicker<Asset, Path> extends StatefulWidget {
       delegate: delegate,
       permissionRequestOption: permissionRequestOption,
       useRootNavigator: useRootNavigator,
+      pageRouteSettings: pageRouteSettings,
       pageRouteBuilder: pageRouteBuilder,
     );
   }
@@ -113,7 +118,7 @@ class AssetPickerState<Asset, Path> extends State<AssetPicker<Asset, Path>>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    AssetPicker.registerObserve(_onLimitedAssetsUpdated);
+    AssetPicker.registerObserve(_onAssetsUpdated);
     widget.builder.initState(this);
   }
 
@@ -125,9 +130,9 @@ class AssetPickerState<Asset, Path> extends State<AssetPicker<Asset, Path>>
         if (!mounted) {
           return;
         }
-        widget.builder.permission.value = ps;
+        widget.builder.permissionNotifier.value = ps;
         if (ps == PermissionState.limited && Platform.isAndroid) {
-          _onLimitedAssetsUpdated(const MethodCall(''));
+          _onAssetsUpdated(const MethodCall(''));
         }
       });
     }
@@ -136,17 +141,15 @@ class AssetPickerState<Asset, Path> extends State<AssetPicker<Asset, Path>>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    AssetPicker.unregisterObserve(_onLimitedAssetsUpdated);
+    AssetPicker.unregisterObserve(_onAssetsUpdated);
     widget.builder.dispose();
     super.dispose();
   }
 
-  Future<void> _onLimitedAssetsUpdated(MethodCall call) {
+  Future<void> _onAssetsUpdated(MethodCall call) {
     return widget.builder.onAssetsChanged(call, (VoidCallback fn) {
       fn();
-      if (mounted) {
-        setState(() {});
-      }
+      safeSetState(() {});
     });
   }
 
